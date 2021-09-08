@@ -22,7 +22,9 @@ import net.openhft.access.Access;
  * Adapted version of xxHash implementation from https://github.com/Cyan4973/xxHash.
  * This implementation provides endian-independent hash values, but it's slower on big-endian platforms.
  */
-class XxHash {
+class XxHash extends HashFunction {
+    static final XxHash INSTANCE = new XxHash();
+
     // Primes if treated as unsigned
     private static final long P1 = -7046029288634856825L;
     private static final long P2 = -4417276706812531889L;
@@ -30,7 +32,8 @@ class XxHash {
     private static final long P4 = -8796714831421723037L;
     private static final long P5 = 2870177450012600261L;
 
-    static <T> long hash(T input, Access<T> access, long off, long length) {
+    @Override
+    public <T> long hash(T input, Access<T> access, long off, long length) {
         long hash;
         long remaining = length;
 

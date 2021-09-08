@@ -41,15 +41,15 @@ public class XxHash3Test {
 
     @Test
     public void testXXH3WithoutSeeds() {
-        test(HashFunction.xx3(), XXH3Test_HASHES.HASHES_OF_LOOPING_BYTES_WITHOUT_SEED);
+        test(Hash.xx3(), XXH3Test_HASHES.HASHES_OF_LOOPING_BYTES_WITHOUT_SEED);
     }
 
-    public void test(LongHashFunction h, long[] hashesOfLoopingBytes) {
+    public void test(HashFunction h, long[] hashesOfLoopingBytes) {
         byte[] data = new byte[len];
         for (int j = 0; j < data.length; j++) {
             data[j] = (byte) j;
         }
-        LongHashFunctionTest.test(h, data, hashesOfLoopingBytes[len]);
+        HashFunctionTest.test(h, data, hashesOfLoopingBytes[len]);
     }
 }
 

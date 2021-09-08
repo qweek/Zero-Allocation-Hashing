@@ -16,7 +16,7 @@
 
 package net.openhft.access;
 
-import net.openhft.hash.LongHashFunction;
+import net.openhft.hash.HashFunction;
 
 import java.nio.ByteOrder;
 
@@ -45,7 +45,7 @@ import static net.openhft.internal.Primitives.unsignedInt;
  *
  * <p>Only {@link #getByte(Object, long)}, {@link #getInt(Object, long)} and {@link #getLong(Object, long)}
  * methods are abstract in this class, so implementing them is sufficient for valid {@code Access} instance,
- * but for efficiency your should override methods used by target {@link LongHashFunction} implementation.
+ * but for efficiency your should override methods used by target {@link HashFunction} implementation.
  *
  * <p>{@code Access} API is designed for inputs, that actually represent byte sequences that lay
  * continuously in memory. Theoretically {@code Access} strategy could be implemented for
@@ -54,7 +54,7 @@ import static net.openhft.internal.Primitives.unsignedInt;
  * be slow.
  *
  * @param <T> the type of the object to access
- * @see LongHashFunction#hash(Object, Access, long, long)
+ * @see HashFunction#hash(Object, Access, long, long)
  */
 public abstract class Access<T> {
     /**

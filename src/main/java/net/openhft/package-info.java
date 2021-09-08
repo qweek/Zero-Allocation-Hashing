@@ -20,11 +20,11 @@
  *
  * <p>Currently implemented (in alphabetical order):
  * <ul>
- *     <li>{@code long}-valued functions: see {@link net.openhft.hash.LongHashFunction}
+ *     <li>{@code long}-valued functions: see {@link net.openhft.hash.HashFunction}
  *     <ul>
  *         <li>
- *         {@linkplain net.openhft.hash.HashFunction#xx() xxHash without seed}.
- *         {@linkplain net.openhft.hash.HashFunction#xx3() xxHash without seed}.
+ *         {@linkplain net.openhft.hash.Hash#xx() xxHash without seed}.
+ *         {@linkplain net.openhft.hash.Hash#xx3() xxHash without seed}.
  *         </li>
  *     </ul>
  *     </li>

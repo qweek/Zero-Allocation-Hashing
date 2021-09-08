@@ -26,7 +26,9 @@ import static net.openhft.internal.Maths.unsignedLongMulXorFold;
  * Adapted version of XXH3 implementation from https://github.com/Cyan4973/xxHash.
  * This implementation provides endian-independent hash values, but it's slower on big-endian platforms.
  */
-class XxHash3 {
+class XxHash3 extends HashFunction {
+    static final XxHash3 INSTANCE = new XxHash3();
+
     private static class Secret {
         private static final Access<byte[]> unsafeLE = UnsafeAccess.instance();
         private static final long baseOffset = UnsafeAccess.baseOffset();
@@ -66,45 +68,8 @@ class XxHash3 {
     private static final long nbStripesPerBlock = (192 - 64) / 8;
     private static final long block_len = 64 * nbStripesPerBlock;
 
-    private static long XXH64_avalanche(long h64) {
-        h64 ^= h64 >>> 33;
-        h64 *= XXH_PRIME64_2;
-        h64 ^= h64 >>> 29;
-        h64 *= XXH_PRIME64_3;
-        return h64 ^ (h64 >>> 32);
-    }
-
-    private static long avalanche(long h64) {
-        h64 ^= h64 >>> 37;
-        h64 *= 0x165667919E3779F9L;
-        return h64 ^ (h64 >>> 32);
-    }
-
-    private static long rrmxmx(long h64, final long length) {
-        h64 ^= Long.rotateLeft(h64, 49) ^ Long.rotateLeft(h64, 24);
-        h64 *= 0x9FB21C651E98DF25L;
-        h64 ^= (h64 >>> 35) + length;
-        h64 *= 0x9FB21C651E98DF25L;
-        return h64 ^ (h64 >>> 28);
-    }
-
-    private static <T> long mix16B(final T input, final Access<T> access, final long offIn, final long offSec) {
-        final long input_lo = access.i64(input, offIn);
-        final long input_hi = access.i64(input, offIn + 8);
-        return unsignedLongMulXorFold(
-            input_lo ^ Secret.i64(offSec),
-            input_hi ^ Secret.i64(offSec+8)
-        );
-    }
-
-    private static long mix2Accs(final long acc_lh, final long acc_rh, final long offSec) {
-        return unsignedLongMulXorFold(
-            acc_lh ^ Secret.i64(offSec),
-            acc_rh ^ Secret.i64(offSec+8)
-        );
-    }
-
-    static <T> long hash(final T input, final Access<T> access, final long off, final long length) {
+    @Override
+    public <T> long hash(final T input, final Access<T> access, final long off, final long length) {
         if (length <= 16) {
             // len_0to16_64b
             if (length > 8) {
@@ -339,5 +304,43 @@ class XxHash3 {
                 + mix2Accs(acc_6, acc_7, 11 + 16 * 3);
 
         return avalanche(result64);
+    }
+
+    private static long XXH64_avalanche(long h64) {
+        h64 ^= h64 >>> 33;
+        h64 *= XXH_PRIME64_2;
+        h64 ^= h64 >>> 29;
+        h64 *= XXH_PRIME64_3;
+        return h64 ^ (h64 >>> 32);
+    }
+
+    private static long avalanche(long h64) {
+        h64 ^= h64 >>> 37;
+        h64 *= 0x165667919E3779F9L;
+        return h64 ^ (h64 >>> 32);
+    }
+
+    private static long rrmxmx(long h64, final long length) {
+        h64 ^= Long.rotateLeft(h64, 49) ^ Long.rotateLeft(h64, 24);
+        h64 *= 0x9FB21C651E98DF25L;
+        h64 ^= (h64 >>> 35) + length;
+        h64 *= 0x9FB21C651E98DF25L;
+        return h64 ^ (h64 >>> 28);
+    }
+
+    private static <T> long mix16B(final T input, final Access<T> access, final long offIn, final long offSec) {
+        final long input_lo = access.i64(input, offIn);
+        final long input_hi = access.i64(input, offIn + 8);
+        return unsignedLongMulXorFold(
+                input_lo ^ Secret.i64(offSec),
+                input_hi ^ Secret.i64(offSec+8)
+        );
+    }
+
+    private static long mix2Accs(final long acc_lh, final long acc_rh, final long offSec) {
+        return unsignedLongMulXorFold(
+                acc_lh ^ Secret.i64(offSec),
+                acc_rh ^ Secret.i64(offSec+8)
+        );
     }
 }

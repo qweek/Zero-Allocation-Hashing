@@ -22,15 +22,15 @@ import java.nio.ByteBuffer;
 import static java.nio.ByteOrder.*;
 import static org.junit.Assert.assertEquals;
 
-public class LongHashFunctionTest {
-    public static void test(LongHashFunction f, byte[] data, long eh) {
+public class HashFunctionTest {
+    public static void test(HashFunction f, byte[] data, long eh) {
         int len = data.length;
         ByteBuffer bb = ByteBuffer.wrap(data).order(nativeOrder());
         testArrays(f, data, eh, len);
         testByteBuffers(f, eh, len, bb);
     }
 
-    private static void testArrays(LongHashFunction f, byte[] data, long eh, int len) {
+    private static void testArrays(HashFunction f, byte[] data, long eh, int len) {
         assertEquals("byte array", eh, f.hashBytes(data));
 
         byte[] data2 = new byte[len + 2];
@@ -38,7 +38,7 @@ public class LongHashFunctionTest {
         assertEquals("byte array off len", eh, f.hashBytes(data2, 1, len));
     }
 
-    private static void testByteBuffers(LongHashFunction f, long eh, int len, ByteBuffer bb) {
+    private static void testByteBuffers(HashFunction f, long eh, int len, ByteBuffer bb) {
         // To Support IBM JDK7, methods of Buffer#position(int) and Buffer#clear() for a ByteBuffer
         // object need to be invoked from a parent Buffer object explicitly.
 
