@@ -10,14 +10,9 @@ package sun.misc;
  */
 
 public final class Unsafe {
-    public native Object  getObject( Object o, long offset);
     public native int     getInt(    Object o, long offset);
-    public native boolean getBoolean(Object o, long offset);
     public native byte    getByte(   Object o, long offset);
-    public native short   getShort(  Object o, long offset);
-    public native char    getChar(   Object o, long offset);
     public native long    getLong(   Object o, long offset);
 
-    public native long objectFieldOffset(java.lang.reflect.Field f);
     public native int arrayBaseOffset(Class arrayClass);
 }

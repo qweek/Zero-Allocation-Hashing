@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-package net.openhft.hashing;
-
-import javax.annotation.ParametersAreNonnullByDefault;
-
-@ParametersAreNonnullByDefault
-interface StringHash {
-    long longHash(String s, LongHashFunction hashFunction, int off, int len);
-    void hash(String s, LongTupleHashFunction hashFunction, int off, int len, long[] result);
-}
+/**
+ * API for hashing sequential data and zero-allocation, pretty fast implementations
+ * of non-cryptographic hash functions.
+ *
+ * <p>Currently implemented (in alphabetical order):
+ * <ul>
+ *     <li>{@code long}-valued functions: see {@link net.openhft.hash.LongHashFunction}
+ *     <ul>
+ *         <li>
+ *         {@linkplain net.openhft.hash.HashFunction#xx() xxHash without seed}.
+ *         {@linkplain net.openhft.hash.HashFunction#xx3() xxHash without seed}.
+ *         </li>
+ *     </ul>
+ *     </li>
+ * </ul>
+ */
+package net.openhft;

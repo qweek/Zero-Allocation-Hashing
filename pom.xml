@@ -284,7 +284,7 @@
                         <Bundle-Name>OpenHFT :: ${project.artifactId}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Export-Package>
-                            net.openhft.hashing.*;-noimport:=true,
+                            net.openhft.hash.*;-noimport:=true,
                             !java.*,
                             !sun.*
                         </Export-Package>
