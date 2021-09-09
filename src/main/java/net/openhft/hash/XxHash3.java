@@ -16,11 +16,7 @@
 
 package net.openhft.hash;
 
-import net.openhft.access.Access;
-import net.openhft.access.UnsafeAccess;
-import net.openhft.internal.Primitives;
-
-import static net.openhft.internal.Maths.unsignedLongMulXorFold;
+import java.nio.ByteBuffer;
 
 /**
  * Adapted version of XXH3 implementation from https://github.com/Cyan4973/xxHash.
@@ -29,29 +25,23 @@ import static net.openhft.internal.Maths.unsignedLongMulXorFold;
 class XxHash3 extends HashFunction {
     static final XxHash3 INSTANCE = new XxHash3();
 
-    private static class Secret {
-        private static final Access<byte[]> unsafeLE = UnsafeAccess.instance();
-        private static final long baseOffset = UnsafeAccess.baseOffset();
+    /*! Pseudorandom secret taken directly from FARSH. */
+    private static final byte[] farsh = {
+            (byte)0xb8, (byte)0xfe, (byte)0x6c, (byte)0x39, (byte)0x23, (byte)0xa4, (byte)0x4b, (byte)0xbe, (byte)0x7c, (byte)0x01, (byte)0x81, (byte)0x2c, (byte)0xf7, (byte)0x21, (byte)0xad, (byte)0x1c,
+            (byte)0xde, (byte)0xd4, (byte)0x6d, (byte)0xe9, (byte)0x83, (byte)0x90, (byte)0x97, (byte)0xdb, (byte)0x72, (byte)0x40, (byte)0xa4, (byte)0xa4, (byte)0xb7, (byte)0xb3, (byte)0x67, (byte)0x1f,
+            (byte)0xcb, (byte)0x79, (byte)0xe6, (byte)0x4e, (byte)0xcc, (byte)0xc0, (byte)0xe5, (byte)0x78, (byte)0x82, (byte)0x5a, (byte)0xd0, (byte)0x7d, (byte)0xcc, (byte)0xff, (byte)0x72, (byte)0x21,
+            (byte)0xb8, (byte)0x08, (byte)0x46, (byte)0x74, (byte)0xf7, (byte)0x43, (byte)0x24, (byte)0x8e, (byte)0xe0, (byte)0x35, (byte)0x90, (byte)0xe6, (byte)0x81, (byte)0x3a, (byte)0x26, (byte)0x4c,
+            (byte)0x3c, (byte)0x28, (byte)0x52, (byte)0xbb, (byte)0x91, (byte)0xc3, (byte)0x00, (byte)0xcb, (byte)0x88, (byte)0xd0, (byte)0x65, (byte)0x8b, (byte)0x1b, (byte)0x53, (byte)0x2e, (byte)0xa3,
+            (byte)0x71, (byte)0x64, (byte)0x48, (byte)0x97, (byte)0xa2, (byte)0x0d, (byte)0xf9, (byte)0x4e, (byte)0x38, (byte)0x19, (byte)0xef, (byte)0x46, (byte)0xa9, (byte)0xde, (byte)0xac, (byte)0xd8,
+            (byte)0xa8, (byte)0xfa, (byte)0x76, (byte)0x3f, (byte)0xe3, (byte)0x9c, (byte)0x34, (byte)0x3f, (byte)0xf9, (byte)0xdc, (byte)0xbb, (byte)0xc7, (byte)0xc7, (byte)0x0b, (byte)0x4f, (byte)0x1d,
+            (byte)0x8a, (byte)0x51, (byte)0xe0, (byte)0x4b, (byte)0xcd, (byte)0xb4, (byte)0x59, (byte)0x31, (byte)0xc8, (byte)0x9f, (byte)0x7e, (byte)0xc9, (byte)0xd9, (byte)0x78, (byte)0x73, (byte)0x64,
+            (byte)0xea, (byte)0xc5, (byte)0xac, (byte)0x83, (byte)0x34, (byte)0xd3, (byte)0xeb, (byte)0xc3, (byte)0xc5, (byte)0x81, (byte)0xa0, (byte)0xff, (byte)0xfa, (byte)0x13, (byte)0x63, (byte)0xeb,
+            (byte)0x17, (byte)0x0d, (byte)0xdd, (byte)0x51, (byte)0xb7, (byte)0xf0, (byte)0xda, (byte)0x49, (byte)0xd3, (byte)0x16, (byte)0x55, (byte)0x26, (byte)0x29, (byte)0xd4, (byte)0x68, (byte)0x9e,
+            (byte)0x2b, (byte)0x16, (byte)0xbe, (byte)0x58, (byte)0x7d, (byte)0x47, (byte)0xa1, (byte)0xfc, (byte)0x8f, (byte)0xf8, (byte)0xb8, (byte)0xd1, (byte)0x7a, (byte)0xd0, (byte)0x31, (byte)0xce,
+            (byte)0x45, (byte)0xcb, (byte)0x3a, (byte)0x8f, (byte)0x95, (byte)0x16, (byte)0x04, (byte)0x28, (byte)0xaf, (byte)0xd7, (byte)0xfb, (byte)0xca, (byte)0xbb, (byte)0x4b, (byte)0x40, (byte)0x7e,
+    };
 
-        /*! Pseudorandom secret taken directly from FARSH. */
-        private static final byte[] secret = {
-                (byte)0xb8, (byte)0xfe, (byte)0x6c, (byte)0x39, (byte)0x23, (byte)0xa4, (byte)0x4b, (byte)0xbe, (byte)0x7c, (byte)0x01, (byte)0x81, (byte)0x2c, (byte)0xf7, (byte)0x21, (byte)0xad, (byte)0x1c,
-                (byte)0xde, (byte)0xd4, (byte)0x6d, (byte)0xe9, (byte)0x83, (byte)0x90, (byte)0x97, (byte)0xdb, (byte)0x72, (byte)0x40, (byte)0xa4, (byte)0xa4, (byte)0xb7, (byte)0xb3, (byte)0x67, (byte)0x1f,
-                (byte)0xcb, (byte)0x79, (byte)0xe6, (byte)0x4e, (byte)0xcc, (byte)0xc0, (byte)0xe5, (byte)0x78, (byte)0x82, (byte)0x5a, (byte)0xd0, (byte)0x7d, (byte)0xcc, (byte)0xff, (byte)0x72, (byte)0x21,
-                (byte)0xb8, (byte)0x08, (byte)0x46, (byte)0x74, (byte)0xf7, (byte)0x43, (byte)0x24, (byte)0x8e, (byte)0xe0, (byte)0x35, (byte)0x90, (byte)0xe6, (byte)0x81, (byte)0x3a, (byte)0x26, (byte)0x4c,
-                (byte)0x3c, (byte)0x28, (byte)0x52, (byte)0xbb, (byte)0x91, (byte)0xc3, (byte)0x00, (byte)0xcb, (byte)0x88, (byte)0xd0, (byte)0x65, (byte)0x8b, (byte)0x1b, (byte)0x53, (byte)0x2e, (byte)0xa3,
-                (byte)0x71, (byte)0x64, (byte)0x48, (byte)0x97, (byte)0xa2, (byte)0x0d, (byte)0xf9, (byte)0x4e, (byte)0x38, (byte)0x19, (byte)0xef, (byte)0x46, (byte)0xa9, (byte)0xde, (byte)0xac, (byte)0xd8,
-                (byte)0xa8, (byte)0xfa, (byte)0x76, (byte)0x3f, (byte)0xe3, (byte)0x9c, (byte)0x34, (byte)0x3f, (byte)0xf9, (byte)0xdc, (byte)0xbb, (byte)0xc7, (byte)0xc7, (byte)0x0b, (byte)0x4f, (byte)0x1d,
-                (byte)0x8a, (byte)0x51, (byte)0xe0, (byte)0x4b, (byte)0xcd, (byte)0xb4, (byte)0x59, (byte)0x31, (byte)0xc8, (byte)0x9f, (byte)0x7e, (byte)0xc9, (byte)0xd9, (byte)0x78, (byte)0x73, (byte)0x64,
-                (byte)0xea, (byte)0xc5, (byte)0xac, (byte)0x83, (byte)0x34, (byte)0xd3, (byte)0xeb, (byte)0xc3, (byte)0xc5, (byte)0x81, (byte)0xa0, (byte)0xff, (byte)0xfa, (byte)0x13, (byte)0x63, (byte)0xeb,
-                (byte)0x17, (byte)0x0d, (byte)0xdd, (byte)0x51, (byte)0xb7, (byte)0xf0, (byte)0xda, (byte)0x49, (byte)0xd3, (byte)0x16, (byte)0x55, (byte)0x26, (byte)0x29, (byte)0xd4, (byte)0x68, (byte)0x9e,
-                (byte)0x2b, (byte)0x16, (byte)0xbe, (byte)0x58, (byte)0x7d, (byte)0x47, (byte)0xa1, (byte)0xfc, (byte)0x8f, (byte)0xf8, (byte)0xb8, (byte)0xd1, (byte)0x7a, (byte)0xd0, (byte)0x31, (byte)0xce,
-                (byte)0x45, (byte)0xcb, (byte)0x3a, (byte)0x8f, (byte)0x95, (byte)0x16, (byte)0x04, (byte)0x28, (byte)0xaf, (byte)0xd7, (byte)0xfb, (byte)0xca, (byte)0xbb, (byte)0x4b, (byte)0x40, (byte)0x7e,
-        };
-
-        static long i64(final long offset) { return unsafeLE.i64(secret, baseOffset + offset); }
-        static  int i32(final long offset) { return unsafeLE.i32(secret, baseOffset + offset); }
-    }
+    private static final ByteBuffer secret = littleEndian(ByteBuffer.wrap(farsh));
 
     // Primes
     private static final long XXH_PRIME32_1 = 0x9E3779B1L;   /*!< 0b10011110001101110111100110110001 */
@@ -69,37 +59,37 @@ class XxHash3 extends HashFunction {
     private static final long block_len = 64 * nbStripesPerBlock;
 
     @Override
-    public <T> long hash(final T input, final Access<T> access, final long off, final long length) {
+    public long hashByteBuffer(final ByteBuffer buffer, final long off, final long length) {
         if (length <= 16) {
             // len_0to16_64b
             if (length > 8) {
                 // len_9to16_64b
-                final long bitflip1 = Secret.i64(24) ^ Secret.i64(32);
-                final long bitflip2 = Secret.i64(40) ^ Secret.i64(48);
-                final long input_lo = access.i64(input, off) ^ bitflip1;
-                final long input_hi = access.i64(input, off + length - 8) ^ bitflip2;
+                final long bitflip1 = i64(secret, 24) ^ i64(secret, 32);
+                final long bitflip2 = i64(secret, 40) ^ i64(secret, 48);
+                final long input_lo = i64(buffer, off) ^ bitflip1;
+                final long input_hi = i64(buffer, off + length - 8) ^ bitflip2;
                 final long acc = length + Long.reverseBytes(input_lo) + input_hi + unsignedLongMulXorFold(input_lo, input_hi);
                 return avalanche(acc);
             }
             if (length >= 4) {
                 // len_4to8_64b
                 long s = Long.reverseBytes(0L);
-                final long input1 = access.i32(input, off); // high int will be shifted
-                final long input2 = access.u32(input, off + length - 4);
-                final long bitflip = (Secret.i64(8) ^ Secret.i64(16)) - s;
+                final long input1 = i32(buffer, off); // high int will be shifted
+                final long input2 = u32(buffer, off + length - 4);
+                final long bitflip = (i64(secret, 8) ^ i64(secret, 16)) - s;
                 final long keyed = (input2 + (input1 << 32)) ^ bitflip;
                 return rrmxmx(keyed, length);
             }
             if (length != 0) {
                 // len_1to3_64b
-                final int c1 = access.u8(input, off);
-                final int c2 = access.i8(input, off + (length >> 1)); // high 3 bytes will be shifted
-                final int c3 = access.u8(input, off + length - 1);
-                final long combined = Primitives.unsignedInt((c1 << 16) | (c2  << 24) | c3 | ((int)length << 8));
-                final long bitflip = Primitives.unsignedInt(Secret.i32(0) ^ Secret.i32(4));
+                final int c1 = u8(buffer, off);
+                final int c2 = i8(buffer, off + (length >> 1)); // high 3 bytes will be shifted
+                final int c3 = u8(buffer, off + length - 1);
+                final long combined = unsignedInt((c1 << 16) | (c2  << 24) | c3 | ((int)length << 8));
+                final long bitflip = unsignedInt(i32(secret,0) ^ i32(secret, 4));
                 return XXH64_avalanche(combined ^ bitflip);
             }
-            return XXH64_avalanche(Secret.i64(56) ^ Secret.i64(64));
+            return XXH64_avalanche(i64(secret, 56) ^ i64(secret, 64));
         }
         if (length <= 128) {
             // len_17to128_64b
@@ -108,17 +98,17 @@ class XxHash3 extends HashFunction {
             if (length > 32) {
                 if (length > 64) {
                     if (length > 96) {
-                        acc += mix16B(input, access, off + 48, 96);
-                        acc += mix16B(input, access, off + length - 64, 112);
+                        acc += mix16B(buffer, off + 48, 96);
+                        acc += mix16B(buffer, off + length - 64, 112);
                     }
-                    acc += mix16B(input, access, off + 32, 64);
-                    acc += mix16B(input, access, off + length - 48, 80);
+                    acc += mix16B(buffer, off + 32, 64);
+                    acc += mix16B(buffer, off + length - 48, 80);
                 }
-                acc += mix16B(input, access, off + 16, 32);
-                acc += mix16B(input, access, off + length - 32, 48);
+                acc += mix16B(buffer, off + 16, 32);
+                acc += mix16B(buffer, off + length - 32, 48);
             }
-            acc += mix16B(input, access, off, 0);
-            acc += mix16B(input, access, off + length - 16, 16);
+            acc += mix16B(buffer, off, 0);
+            acc += mix16B(buffer, off + length - 16, 16);
 
             return avalanche(acc);
         }
@@ -128,16 +118,16 @@ class XxHash3 extends HashFunction {
             final int nbRounds = (int)length / 16;
             int i = 0;
             for (; i < 8; ++i) {
-                acc += mix16B(input, access, off + 16L*i, 16L*i);
+                acc += mix16B(buffer, off + 16L*i, 16L*i);
             }
             acc = avalanche(acc);
 
             for (; i < nbRounds; ++i) {
-                acc += mix16B(input, access, off + 16L*i, 16L*(i-8) + 3);
+                acc += mix16B(buffer, off + 16L*i, 16L*(i-8) + 3);
             }
 
             /* last bytes */
-            acc += mix16B(input, access, off + length - 16, 136 - 17);
+            acc += mix16B(buffer, off + length - 16, 136 - 17);
             return avalanche(acc);
         }
 
@@ -161,37 +151,37 @@ class XxHash3 extends HashFunction {
                 final long offStripe = offBlock + s * 64;
                 final long offSec = s * 8;
                 {
-                    final long data_val_0 = access.i64(input, offStripe);
-                    final long data_val_1 = access.i64(input, offStripe + 8);
-                    final long data_key_0 = data_val_0 ^ Secret.i64(offSec);
-                    final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8);
+                    final long data_val_0 = i64(buffer, offStripe);
+                    final long data_val_1 = i64(buffer, offStripe + 8);
+                    final long data_key_0 = data_val_0 ^ i64(secret, offSec);
+                    final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8);
                     /* swap adjacent lanes */
                     acc_0 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                     acc_1 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
                 }
                 {
-                    final long data_val_0 = access.i64(input, offStripe + 8*2);
-                    final long data_val_1 = access.i64(input, offStripe + 8*3);
-                    final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*2);
-                    final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*3);
+                    final long data_val_0 = i64(buffer, offStripe + 8*2);
+                    final long data_val_1 = i64(buffer, offStripe + 8*3);
+                    final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*2);
+                    final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*3);
                     /* swap adjacent lanes */
                     acc_2 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                     acc_3 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
                 }
                 {
-                    final long data_val_0 = access.i64(input, offStripe + 8*4);
-                    final long data_val_1 = access.i64(input, offStripe + 8*5);
-                    final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*4);
-                    final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*5);
+                    final long data_val_0 = i64(buffer, offStripe + 8*4);
+                    final long data_val_1 = i64(buffer, offStripe + 8*5);
+                    final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*4);
+                    final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*5);
                     /* swap adjacent lanes */
                     acc_4 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                     acc_5 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
                 }
                 {
-                    final long data_val_0 = access.i64(input, offStripe + 8*6);
-                    final long data_val_1 = access.i64(input, offStripe + 8*7);
-                    final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*6);
-                    final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*7);
+                    final long data_val_0 = i64(buffer, offStripe + 8*6);
+                    final long data_val_1 = i64(buffer, offStripe + 8*7);
+                    final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*6);
+                    final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*7);
                     /* swap adjacent lanes */
                     acc_6 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                     acc_7 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
@@ -200,14 +190,14 @@ class XxHash3 extends HashFunction {
 
             // scrambleAcc_scalar
             final long offSec = 192 - 64;
-            acc_0 = (acc_0 ^ (acc_0 >>> 47) ^ Secret.i64(offSec)) * XXH_PRIME32_1;
-            acc_1 = (acc_1 ^ (acc_1 >>> 47) ^ Secret.i64(offSec + 8)) * XXH_PRIME32_1;
-            acc_2 = (acc_2 ^ (acc_2 >>> 47) ^ Secret.i64(offSec + 8*2)) * XXH_PRIME32_1;
-            acc_3 = (acc_3 ^ (acc_3 >>> 47) ^ Secret.i64(offSec + 8*3)) * XXH_PRIME32_1;
-            acc_4 = (acc_4 ^ (acc_4 >>> 47) ^ Secret.i64(offSec + 8*4)) * XXH_PRIME32_1;
-            acc_5 = (acc_5 ^ (acc_5 >>> 47) ^ Secret.i64(offSec + 8*5)) * XXH_PRIME32_1;
-            acc_6 = (acc_6 ^ (acc_6 >>> 47) ^ Secret.i64(offSec + 8*6)) * XXH_PRIME32_1;
-            acc_7 = (acc_7 ^ (acc_7 >>> 47) ^ Secret.i64(offSec + 8*7)) * XXH_PRIME32_1;
+            acc_0 = (acc_0 ^ (acc_0 >>> 47) ^ i64(secret, offSec)) * XXH_PRIME32_1;
+            acc_1 = (acc_1 ^ (acc_1 >>> 47) ^ i64(secret, offSec + 8)) * XXH_PRIME32_1;
+            acc_2 = (acc_2 ^ (acc_2 >>> 47) ^ i64(secret, offSec + 8*2)) * XXH_PRIME32_1;
+            acc_3 = (acc_3 ^ (acc_3 >>> 47) ^ i64(secret, offSec + 8*3)) * XXH_PRIME32_1;
+            acc_4 = (acc_4 ^ (acc_4 >>> 47) ^ i64(secret, offSec + 8*4)) * XXH_PRIME32_1;
+            acc_5 = (acc_5 ^ (acc_5 >>> 47) ^ i64(secret, offSec + 8*5)) * XXH_PRIME32_1;
+            acc_6 = (acc_6 ^ (acc_6 >>> 47) ^ i64(secret, offSec + 8*6)) * XXH_PRIME32_1;
+            acc_7 = (acc_7 ^ (acc_7 >>> 47) ^ i64(secret, offSec + 8*7)) * XXH_PRIME32_1;
         }
 
         /* last partial block */
@@ -218,37 +208,37 @@ class XxHash3 extends HashFunction {
             final long offStripe = offBlock + s * 64;
             final long offSec = s * 8;
             {
-                final long data_val_0 = access.i64(input, offStripe);
-                final long data_val_1 = access.i64(input, offStripe + 8);
-                final long data_key_0 = data_val_0 ^ Secret.i64(offSec);
-                final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8);
+                final long data_val_0 = i64(buffer, offStripe);
+                final long data_val_1 = i64(buffer, offStripe + 8);
+                final long data_key_0 = data_val_0 ^ i64(secret, offSec);
+                final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8);
                 /* swap adjacent lanes */
                 acc_0 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                 acc_1 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
             }
             {
-                final long data_val_0 = access.i64(input, offStripe + 8*2);
-                final long data_val_1 = access.i64(input, offStripe + 8*3);
-                final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*2);
-                final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*3);
+                final long data_val_0 = i64(buffer, offStripe + 8*2);
+                final long data_val_1 = i64(buffer, offStripe + 8*3);
+                final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*2);
+                final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*3);
                 /* swap adjacent lanes */
                 acc_2 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                 acc_3 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
             }
             {
-                final long data_val_0 = access.i64(input, offStripe + 8*4);
-                final long data_val_1 = access.i64(input, offStripe + 8*5);
-                final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*4);
-                final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*5);
+                final long data_val_0 = i64(buffer, offStripe + 8*4);
+                final long data_val_1 = i64(buffer, offStripe + 8*5);
+                final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*4);
+                final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*5);
                 /* swap adjacent lanes */
                 acc_4 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                 acc_5 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
             }
             {
-                final long data_val_0 = access.i64(input, offStripe + 8*6);
-                final long data_val_1 = access.i64(input, offStripe + 8*7);
-                final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*6);
-                final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*7);
+                final long data_val_0 = i64(buffer, offStripe + 8*6);
+                final long data_val_1 = i64(buffer, offStripe + 8*7);
+                final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*6);
+                final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*7);
                 /* swap adjacent lanes */
                 acc_6 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
                 acc_7 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
@@ -260,37 +250,37 @@ class XxHash3 extends HashFunction {
         final long offStripe = off + length - 64;
         final long offSec = 192 - 64 - 7;
         {
-            final long data_val_0 = access.i64(input, offStripe);
-            final long data_val_1 = access.i64(input, offStripe + 8);
-            final long data_key_0 = data_val_0 ^ Secret.i64(offSec);
-            final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8);
+            final long data_val_0 = i64(buffer, offStripe);
+            final long data_val_1 = i64(buffer, offStripe + 8);
+            final long data_key_0 = data_val_0 ^ i64(secret, offSec);
+            final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8);
             /* swap adjacent lanes */
             acc_0 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
             acc_1 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
         }
         {
-            final long data_val_0 = access.i64(input, offStripe + 8*2);
-            final long data_val_1 = access.i64(input, offStripe + 8*3);
-            final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*2);
-            final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*3);
+            final long data_val_0 = i64(buffer, offStripe + 8*2);
+            final long data_val_1 = i64(buffer, offStripe + 8*3);
+            final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*2);
+            final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*3);
             /* swap adjacent lanes */
             acc_2 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
             acc_3 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
         }
         {
-            final long data_val_0 = access.i64(input, offStripe + 8*4);
-            final long data_val_1 = access.i64(input, offStripe + 8*5);
-            final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*4);
-            final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*5);
+            final long data_val_0 = i64(buffer, offStripe + 8*4);
+            final long data_val_1 = i64(buffer, offStripe + 8*5);
+            final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*4);
+            final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*5);
             /* swap adjacent lanes */
             acc_4 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
             acc_5 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
         }
         {
-            final long data_val_0 = access.i64(input, offStripe + 8*6);
-            final long data_val_1 = access.i64(input, offStripe + 8*7);
-            final long data_key_0 = data_val_0 ^ Secret.i64(offSec + 8*6);
-            final long data_key_1 = data_val_1 ^ Secret.i64(offSec + 8*7);
+            final long data_val_0 = i64(buffer, offStripe + 8*6);
+            final long data_val_1 = i64(buffer, offStripe + 8*7);
+            final long data_key_0 = data_val_0 ^ i64(secret, offSec + 8*6);
+            final long data_key_1 = data_val_1 ^ i64(secret, offSec + 8*7);
             /* swap adjacent lanes */
             acc_6 += data_val_1 + (0xFFFFFFFFL & data_key_0) * (data_key_0 >>> 32);
             acc_7 += data_val_0 + (0xFFFFFFFFL & data_key_1) * (data_key_1 >>> 32);
@@ -328,19 +318,38 @@ class XxHash3 extends HashFunction {
         return h64 ^ (h64 >>> 28);
     }
 
-    private static <T> long mix16B(final T input, final Access<T> access, final long offIn, final long offSec) {
-        final long input_lo = access.i64(input, offIn);
-        final long input_hi = access.i64(input, offIn + 8);
+    private static long mix16B(final ByteBuffer buffer, final long offIn, final long offSec) {
+        final long input_lo = i64(buffer, offIn);
+        final long input_hi = i64(buffer, offIn + 8);
         return unsignedLongMulXorFold(
-                input_lo ^ Secret.i64(offSec),
-                input_hi ^ Secret.i64(offSec+8)
+                input_lo ^ i64(secret, offSec),
+                input_hi ^ i64(secret, offSec+8)
         );
     }
 
     private static long mix2Accs(final long acc_lh, final long acc_rh, final long offSec) {
         return unsignedLongMulXorFold(
-                acc_lh ^ Secret.i64(offSec),
-                acc_rh ^ Secret.i64(offSec+8)
+                acc_lh ^ i64(secret, offSec),
+                acc_rh ^ i64(secret, offSec+8)
         );
+    }
+
+    protected static long unsignedLongMulXorFold(final long lhs, final long rhs) {
+        // The Grade School method of multiplication is a hair faster in Java,
+        // primarily used here because the implementation is simpler.
+        final long lhs_l = lhs & 0xFFFFFFFFL;
+        final long lhs_h = lhs >>> 32;
+        final long rhs_l = rhs & 0xFFFFFFFFL;
+        final long rhs_h = rhs >>> 32;
+        final long lo_lo = lhs_l * rhs_l;
+        final long hi_lo = lhs_h * rhs_l;
+        final long lo_hi = lhs_l * rhs_h;
+        final long hi_hi = lhs_h * rhs_h;
+
+        // Add the products together. This will never overflow.
+        final long cross = (lo_lo >>> 32) + (hi_lo & 0xFFFFFFFFL) + lo_hi;
+        final long upper = (hi_lo >>> 32) + (cross >>> 32) + hi_hi;
+        final long lower = (cross << 32) | (lo_lo & 0xFFFFFFFFL);
+        return lower ^ upper;
     }
 }

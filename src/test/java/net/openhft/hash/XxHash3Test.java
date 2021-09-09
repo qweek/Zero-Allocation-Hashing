@@ -23,12 +23,14 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static org.junit.Assert.assertEquals;
+
 @RunWith(Parameterized.class)
 public class XxHash3Test {
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        final int maxLen = XXH3Test_HASHES.HASHES_OF_LOOPING_BYTES_WITHOUT_SEED.length;
+        final int maxLen = HASHES_OF_LOOPING_BYTES_WITHOUT_SEED.length;
         ArrayList<Object[]> data = new ArrayList<>();
         for (int len = 0; len < maxLen; len++) {
             data.add(new Object[]{len});
@@ -41,17 +43,36 @@ public class XxHash3Test {
 
     @Test
     public void testXXH3WithoutSeeds() {
-        test(Hash.xx3(), XXH3Test_HASHES.HASHES_OF_LOOPING_BYTES_WITHOUT_SEED);
-    }
-
-    public void test(HashFunction h, long[] hashesOfLoopingBytes) {
         byte[] data = new byte[len];
         for (int j = 0; j < data.length; j++) {
             data[j] = (byte) j;
         }
-        HashFunctionTest.test(h, data, hashesOfLoopingBytes[len]);
+        HashFunctionTest.test(Hash.xx3(), data, HASHES_OF_LOOPING_BYTES_WITHOUT_SEED[len]);
+
+        HashFunctionTest.testException(Hash.xx(), -1, 1, 2);
+        HashFunctionTest.testException(Hash.xx(), 1, -1, 2);
+        HashFunctionTest.testException(Hash.xx(), 1, 1, 1);
+        HashFunctionTest.testException(Hash.xx(), Integer.MAX_VALUE, Integer.MAX_VALUE, 1);
     }
-}
+
+    @Test
+    public void testUnsignedLongMulXorFold() {
+        {
+            long x = 0x100000001L;
+            long y = 0x200000002L;
+            assertEquals(2L ^ 0x400000002L, XxHash3.unsignedLongMulXorFold(x, y));
+        }
+        {
+            long x = -1;
+            long y = -1;
+            assertEquals((-2) ^ 1, XxHash3.unsignedLongMulXorFold(x, y));
+        }
+        {
+            long x = -1;
+            long y = 0x300000003L;
+            assertEquals(0x300000002L ^ (-0x300000003L), XxHash3.unsignedLongMulXorFold(x, y));
+        }
+    }
 
 /**
  * Test data is output of the following program with xxh3 implementation
@@ -84,7 +105,6 @@ int main()
 }
  */
 
-class XXH3Test_HASHES {
     public static final long[] HASHES_OF_LOOPING_BYTES_WITHOUT_SEED = {
         3244421341483603138L,
         -4302098779834749733L,

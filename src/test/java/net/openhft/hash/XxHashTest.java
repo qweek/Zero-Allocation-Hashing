@@ -40,16 +40,16 @@ public class XxHashTest {
 
     @Test
     public void testWithoutSeeds() {
-        test(Hash.xx(), HASHES_OF_LOOPING_BYTES_WITHOUT_SEED);
-    }
-
-
-    public void test(HashFunction city, long[] hashesOfLoopingBytes) {
         byte[] data = new byte[len];
         for (int j = 0; j < data.length; j++) {
             data[j] = (byte) j;
         }
-        HashFunctionTest.test(city, data, hashesOfLoopingBytes[len]);
+        HashFunctionTest.test(Hash.xx(), data, HASHES_OF_LOOPING_BYTES_WITHOUT_SEED[len]);
+
+        HashFunctionTest.testException(Hash.xx(), -1, 1, 2);
+        HashFunctionTest.testException(Hash.xx(), 1, -1, 2);
+        HashFunctionTest.testException(Hash.xx(), 1, 1, 1);
+        HashFunctionTest.testException(Hash.xx(), Integer.MAX_VALUE, Integer.MAX_VALUE, 1);
     }
 
 /**

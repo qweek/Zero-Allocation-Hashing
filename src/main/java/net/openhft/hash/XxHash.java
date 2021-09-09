@@ -16,7 +16,7 @@
 
 package net.openhft.hash;
 
-import net.openhft.access.Access;
+import java.nio.ByteBuffer;
 
 /**
  * Adapted version of xxHash implementation from https://github.com/Cyan4973/xxHash.
@@ -33,7 +33,7 @@ class XxHash extends HashFunction {
     private static final long P5 = 2870177450012600261L;
 
     @Override
-    public <T> long hash(T input, Access<T> access, long off, long length) {
+    public long hashByteBuffer(final ByteBuffer buffer, long off, final long length) {
         long hash;
         long remaining = length;
 
@@ -44,19 +44,19 @@ class XxHash extends HashFunction {
             long v4 = -P1;
 
             do {
-                v1 += access.i64(input, off) * P2;
+                v1 += i64(buffer, off) * P2;
                 v1 = Long.rotateLeft(v1, 31);
                 v1 *= P1;
 
-                v2 += access.i64(input, off + 8) * P2;
+                v2 += i64(buffer, off + 8) * P2;
                 v2 = Long.rotateLeft(v2, 31);
                 v2 *= P1;
 
-                v3 += access.i64(input, off + 16) * P2;
+                v3 += i64(buffer, off + 16) * P2;
                 v3 = Long.rotateLeft(v3, 31);
                 v3 *= P1;
 
-                v4 += access.i64(input, off + 24) * P2;
+                v4 += i64(buffer, off + 24) * P2;
                 v4 = Long.rotateLeft(v4, 31);
                 v4 *= P1;
 
@@ -99,7 +99,7 @@ class XxHash extends HashFunction {
         hash += length;
 
         while (remaining >= 8) {
-            long k1 = access.i64(input, off);
+            long k1 = i64(buffer, off);
             k1 *= P2;
             k1 = Long.rotateLeft(k1, 31);
             k1 *= P1;
@@ -110,14 +110,14 @@ class XxHash extends HashFunction {
         }
 
         if (remaining >= 4) {
-            hash ^= access.u32(input, off) * P1;
+            hash ^= u32(buffer, off) * P1;
             hash = Long.rotateLeft(hash, 23) * P2 + P3;
             off += 4;
             remaining -= 4;
         }
 
         while (remaining != 0) {
-            hash ^= access.u8(input, off) * P5;
+            hash ^= u8(buffer, off) * P5;
             hash = Long.rotateLeft(hash, 11) * P1;
             --remaining;
             ++off;
