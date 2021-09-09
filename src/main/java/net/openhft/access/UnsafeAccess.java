@@ -29,9 +29,9 @@ public class UnsafeAccess extends Access<byte[]> {
     private static final Unsafe UNSAFE;
     private static final long BYTE_BASE;
     @NotNull
-    private static final Access<byte[]> INSTANCE;
+    private static final Access<byte[]> INSTANCE_LE;
     @NotNull
-    private static final Access<byte[]> INSTANCE_REVERSE;
+    private static final Access<byte[]> INSTANCE_BE;
 
     static {
         try {
@@ -43,8 +43,8 @@ public class UnsafeAccess extends Access<byte[]> {
         } catch (final Exception e) {
             throw new AssertionError(e);
         }
-        INSTANCE = new UnsafeAccess();
-        INSTANCE_REVERSE = Access.reverse(INSTANCE);
+        INSTANCE_LE = new UnsafeAccess();
+        INSTANCE_BE = Access.reverse(INSTANCE_LE);
     }
 
     /**
@@ -55,7 +55,7 @@ public class UnsafeAccess extends Access<byte[]> {
      * byte order of {@code byteOrder}.
      */
     public static Access<byte[]> instance() {
-        return ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? INSTANCE : INSTANCE_REVERSE;
+        return ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? INSTANCE_LE : INSTANCE_BE;
     }
 
     public static long baseOffset() {

@@ -23,9 +23,9 @@ import java.nio.ByteOrder;
 
 public final class ByteBufferAccess extends Access<ByteBuffer> {
     @NotNull
-    private static final Access<ByteBuffer> INSTANCE = new ByteBufferAccess();
+    private static final Access<ByteBuffer> INSTANCE_LE = new ByteBufferAccess();
     @NotNull
-    private static final Access<ByteBuffer> INSTANCE_REVERSE = Access.reverse(INSTANCE);
+    private static final Access<ByteBuffer> INSTANCE_BE = Access.reverse(INSTANCE_LE);
 
     /**
      * Get {@code this} or the reversed access object for reading the input as fixed
@@ -36,7 +36,7 @@ public final class ByteBufferAccess extends Access<ByteBuffer> {
      * byte order of {@code byteOrder}.
      */
     public static Access<ByteBuffer> instance(final ByteBuffer input) {
-        return input.order() == ByteOrder.LITTLE_ENDIAN ? INSTANCE : INSTANCE_REVERSE;
+        return input.order() == ByteOrder.LITTLE_ENDIAN ? INSTANCE_LE : INSTANCE_BE;
     }
 
     private ByteBufferAccess() {}

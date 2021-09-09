@@ -25,6 +25,8 @@ import sun.nio.ch.DirectBuffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+
 /**
  * Hash function producing {@code long}-valued result from byte sequences of any length and
  * a plenty of different sources which "feels like byte sequences". Except {@link
@@ -104,7 +106,7 @@ public abstract class HashFunction {
      * or {@code len < 0}
      */
     public long hashBytes(@NotNull byte[] input, int off, int len) {
-        checkArrayOffs(input.length, off, len);
+        checkBounds(off, len, input.length);
         return hash(input, UnsafeAccess.instance(), UnsafeAccess.baseOffset() + off, len);
     }
 
@@ -133,7 +135,7 @@ public abstract class HashFunction {
      * or {@code len < 0}
      */
     public long hashBytes(@NotNull ByteBuffer input, int off, int len) {
-        checkArrayOffs(input.capacity(), off, len);
+        checkBounds(off, len, input.capacity());
         return hashByteBuffer(input, off, len);
     }
 
@@ -147,8 +149,8 @@ public abstract class HashFunction {
         }
     }
 
-    private static void checkArrayOffs(final int arrayLength, final int off, final int len) {
-        if (len < 0 || off < 0 || off + len < 0 || off + len > arrayLength)
+    private static void checkBounds(int off, int len, int size) { // package-private
+        if ((off | len | (off + len) | (size - (off + len))) < 0)
             throw new IndexOutOfBoundsException();
     }
 }
