@@ -58,14 +58,6 @@ import static net.openhft.internal.Primitives.unsignedInt;
  */
 public abstract class Access<T> {
     /**
-     * Get the {@code Access} object with a different byte order. This method should
-     * always return a fixed reference.
-     */
-    public static <T> Access<T> reverse(Access<T> access) {
-        return new ReverseAccess<>(access);
-    }
-
-    /**
      * Constructor for use in subclasses.
      */
     protected Access() {}
@@ -134,35 +126,4 @@ public abstract class Access<T> {
      * @return a byte by the given {@code offset}, widened to {@code int}
      */
     protected abstract int getByte(T input, long offset);
-
-    /**
-     * The default reverse byte order delegating {@code Access} class.
-     */
-    private static class ReverseAccess<T> extends Access<T> {
-        private final Access<T> access;
-
-        private ReverseAccess(final Access<T> access) {
-            this.access = access;
-        }
-
-        @Override
-        public long getLong(final T input, final long offset) {
-            return Long.reverseBytes(access.getLong(input, offset));
-        }
-
-        @Override
-        public long getUnsignedInt(final T input, final long offset) {
-            return Long.reverseBytes(access.getUnsignedInt(input, offset)) >>> 32;
-        }
-
-        @Override
-        public int getInt(final T input, final long offset) {
-            return Integer.reverseBytes(access.getInt(input, offset));
-        }
-
-        @Override
-        public int getByte(final T input, final long offset) {
-            return access.getByte(input, offset);
-        }
-    }
 }

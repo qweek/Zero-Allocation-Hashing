@@ -30,8 +30,7 @@ class XxHash3 extends HashFunction {
     static final XxHash3 INSTANCE = new XxHash3();
 
     private static class Secret {
-        private static final Access<byte[]> unsafeLE = UnsafeAccess.instance();
-        private static final long baseOffset = UnsafeAccess.baseOffset();
+        private static final Access<byte[]> unsafe = UnsafeAccess.instance();
 
         /*! Pseudorandom secret taken directly from FARSH. */
         private static final byte[] secret = {
@@ -49,8 +48,8 @@ class XxHash3 extends HashFunction {
                 (byte)0x45, (byte)0xcb, (byte)0x3a, (byte)0x8f, (byte)0x95, (byte)0x16, (byte)0x04, (byte)0x28, (byte)0xaf, (byte)0xd7, (byte)0xfb, (byte)0xca, (byte)0xbb, (byte)0x4b, (byte)0x40, (byte)0x7e,
         };
 
-        static long i64(final long offset) { return unsafeLE.i64(secret, baseOffset + offset); }
-        static  int i32(final long offset) { return unsafeLE.i32(secret, baseOffset + offset); }
+        static long i64(final long offset) { return unsafe.i64(secret, offset); }
+        static  int i32(final long offset) { return unsafe.i32(secret, offset); }
     }
 
     // Primes

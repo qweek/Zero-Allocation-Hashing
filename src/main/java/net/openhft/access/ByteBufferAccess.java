@@ -18,37 +18,39 @@ package net.openhft.access;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public final class ByteBufferAccess extends Access<ByteBuffer> {
+    private static final VarHandle LONG_HANDLE = MethodHandles.byteBufferViewVarHandle(long[].class, LITTLE_ENDIAN);
+    private static final VarHandle INT_HANDLE = MethodHandles.byteBufferViewVarHandle(int[].class, LITTLE_ENDIAN);
     @NotNull
-    private static final Access<ByteBuffer> INSTANCE_LE = new ByteBufferAccess();
-    @NotNull
-    private static final Access<ByteBuffer> INSTANCE_BE = Access.reverse(INSTANCE_LE);
+    private static final Access<ByteBuffer> INSTANCE = new ByteBufferAccess();
 
     /**
      * Get {@code this} or the reversed access object for reading the input as fixed
      * byte order of {@code byteOrder}.
      *
-     * @param input the accessed object
      * @return a {@code Access} object which will read the {@code input} with the
      * byte order of {@code byteOrder}.
      */
-    public static Access<ByteBuffer> instance(final ByteBuffer input) {
-        return input.order() == ByteOrder.LITTLE_ENDIAN ? INSTANCE_LE : INSTANCE_BE;
+    public static Access<ByteBuffer> instance() {
+        return INSTANCE;
     }
 
     private ByteBufferAccess() {}
 
     @Override
     public long getLong(ByteBuffer input, long offset) {
-        return input.getLong((int) offset);
+        return (long) LONG_HANDLE.get(input, (int) offset);
     }
 
     @Override
     public int getInt(ByteBuffer input, long offset) {
-        return input.getInt((int) offset);
+        return (int) INT_HANDLE.get(input, (int) offset);
     }
 
     @Override

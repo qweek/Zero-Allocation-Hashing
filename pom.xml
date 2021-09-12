@@ -35,7 +35,7 @@
 
     <properties>
         <!-- specify the target Java SE release, at least 7 -->
-        <project.target.release>7</project.target.release>
+        <project.target.release>11</project.target.release>
 
         <project.jdk.min-version>${project.target.release}</project.jdk.min-version>
         <project.maven.min-version>3.5.0</project.maven.min-version>
@@ -233,18 +233,18 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+<!--            <plugin>-->
+<!--                <artifactId>maven-gpg-plugin</artifactId>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <id>sign-artifacts</id>-->
+<!--                        <phase>verify</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>sign</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
 
             <plugin>
                 <artifactId>maven-release-plugin</artifactId>
@@ -304,7 +304,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 

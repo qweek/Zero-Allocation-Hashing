@@ -17,35 +17,17 @@
 package net.openhft.access;
 
 import org.jetbrains.annotations.NotNull;
-import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
 
-import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public class UnsafeAccess extends Access<byte[]> {
+    private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, LITTLE_ENDIAN);
+    private static final VarHandle INT_HANDLE = MethodHandles.byteArrayViewVarHandle(int[].class, LITTLE_ENDIAN);
     @NotNull
-    private static final Unsafe UNSAFE;
-    private static final long BYTE_BASE;
-    @NotNull
-    private static final Access<byte[]> INSTANCE_LE;
-    @NotNull
-    private static final Access<byte[]> INSTANCE_BE;
-
-    static {
-        try {
-            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-            theUnsafe.setAccessible(true);
-            UNSAFE = (Unsafe) theUnsafe.get(null);
-
-            BYTE_BASE = UNSAFE.arrayBaseOffset(byte[].class);
-        } catch (final Exception e) {
-            throw new AssertionError(e);
-        }
-        INSTANCE_LE = new UnsafeAccess();
-        INSTANCE_BE = Access.reverse(INSTANCE_LE);
-    }
+    private static final Access<byte[]> INSTANCE = new UnsafeAccess();
 
     /**
      * Get {@code this} or the reversed access object for reading the input as fixed
@@ -55,35 +37,23 @@ public class UnsafeAccess extends Access<byte[]> {
      * byte order of {@code byteOrder}.
      */
     public static Access<byte[]> instance() {
-        return ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? INSTANCE_LE : INSTANCE_BE;
-    }
-
-    public static long baseOffset() {
-        return BYTE_BASE;
-    }
-
-    public static long baseOffset(@NotNull final ByteBuffer buffer) {
-        return BYTE_BASE + buffer.arrayOffset();
-    }
-
-    public static long baseOffset(@NotNull final DirectBuffer buffer) {
-        return buffer.address();
+        return INSTANCE;
     }
 
     private UnsafeAccess() {}
 
     @Override
     public long getLong(byte[] input, long offset) {
-        return UNSAFE.getLong(input, offset);
+        return (long) LONG_HANDLE.get(input, (int)offset);
     }
 
     @Override
     public int getInt(byte[] input, long offset) {
-        return UNSAFE.getInt(input, offset);
+        return (int) INT_HANDLE.get(input, (int)offset);
     }
 
     @Override
     public int getByte(byte[] input, long offset) {
-        return UNSAFE.getByte(input, offset);
+        return input[(int)offset];
     }
 }

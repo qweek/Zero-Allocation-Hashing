@@ -15,10 +15,10 @@ public class UnsafeAccessTest {
     public void testUnsafeAccess() {
         {
             final byte[] b = new byte[]{(byte)0xF4, 0x5D};
-            assertEquals((int) b[0], unsafe.getByte(b, UnsafeAccess.baseOffset()));
-            assertEquals((int) b[1], unsafe.getByte(b, UnsafeAccess.baseOffset() + 1));
-            Assert.assertEquals(Primitives.unsignedByte(b[0]), unsafe.getUnsignedByte(b, UnsafeAccess.baseOffset()));
-            assertEquals(Primitives.unsignedByte(b[1]), unsafe.getUnsignedByte(b, UnsafeAccess.baseOffset() + 1));
+            assertEquals((int) b[0], unsafe.getByte(b, 0));
+            assertEquals((int) b[1], unsafe.getByte(b, 1));
+            Assert.assertEquals(Primitives.unsignedByte(b[0]), unsafe.getUnsignedByte(b, 0));
+            assertEquals(Primitives.unsignedByte(b[1]), unsafe.getUnsignedByte(b, 1));
         }
     }
 
@@ -28,8 +28,8 @@ public class UnsafeAccessTest {
 
         {
             final byte[] b = new byte[]{(byte)0xF4, 0x5D};
-            assertEquals(0x5D, unsafe.getByte(b, UnsafeAccess.baseOffset() + 1));
-            assertEquals(Primitives.unsignedByte(0x5D), unsafe.getUnsignedByte(b, UnsafeAccess.baseOffset() + 1));
+            assertEquals(0x5D, unsafe.getByte(b, 1));
+            assertEquals(Primitives.unsignedByte(0x5D), unsafe.getUnsignedByte(b, 1));
         }
     }
 
@@ -39,8 +39,8 @@ public class UnsafeAccessTest {
 
         {
             final byte[] b = new byte[]{(byte)0xF4, 0x5D};
-            assertEquals(0x5D, unsafe.getByte(b, UnsafeAccess.baseOffset() + 1));
-            assertEquals(Primitives.unsignedByte(0x5D), unsafe.getUnsignedByte(b, UnsafeAccess.baseOffset() + 1));
+            assertEquals(0x5D, unsafe.getByte(b, 1));
+            assertEquals(Primitives.unsignedByte(0x5D), unsafe.getUnsignedByte(b, 1));
         }
     }
 }
